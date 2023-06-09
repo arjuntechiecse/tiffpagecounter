@@ -1,16 +1,19 @@
 import javax.imageio.ImageIO;
 import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.Iterator;
 
-public class TiffPageCounter {
+public class TiffPageCountAndRename {
     public static void main(String[] args) {
         // Specify the directory containing the TIFF files
         String directoryPath = "C:\\Users\\srarj\\Desktop\\tiff_files";
 
         File directory = new File(directoryPath);
         if (directory.isDirectory()) {
-            File[] files = directory.listFiles((dir, name) -> name.toLowerCase().endsWith(".tiff") || name.toLowerCase().endsWith(".tif"));
+            File[] files = directory.listFiles((dir, name) ->
+                    name.toLowerCase().endsWith(".tiff") || name.toLowerCase().endsWith(".tif"));
             if (files != null) {
                 for (File file : files) {
                     try {
@@ -31,15 +34,20 @@ public class TiffPageCounter {
     }
 
     private static int countTiffPages(File file) throws IOException {
-        // Read the TIFF image using ImageIO
-        ImageReader reader = ImageIO.getImageReadersByFormatName("TIFF").next();
-        reader.setInput(ImageIO.createImageInputStream(file));
+        ImageInputStream imageInputStream = ImageIO.createImageInputStream(file);
 
-        // Get the number of pages in the TIFF image
-        int pageCount = reader.getNumImages(true);
+        Iterator<ImageReader> imageReaders = ImageIO.getImageReaders(imageInputStream);
+        if (!imageReaders.hasNext()) {
+            throw new IOException("No TIFF image readers found");
+        }
 
-        // Dispose the reader
-        reader.dispose();
+        ImageReader imageReader = imageReaders.next();
+        imageReader.setInput(imageInputStream);
+
+        int pageCount = imageReader.getNumImages(true);
+
+        imageReader.dispose();
+        imageInputStream.close();
 
         return pageCount;
     }
