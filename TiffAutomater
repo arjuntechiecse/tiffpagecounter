@@ -1,0 +1,79 @@
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+
+import javax.imageio.ImageIO;
+import javax.imageio.ImageReader;
+import javax.imageio.stream.ImageInputStream;
+import java.util.Iterator;
+
+public class TiffAutomater {
+    public static void main(String[] args) {
+        String folderPath = "C:\\Users\\srarj\\Desktop\\tiff_files";
+        File folder = new File(folderPath);
+
+        if (!folder.isDirectory()) {
+            System.out.println("Invalid folder path.");
+            return;
+        }
+
+        File[] files = folder.listFiles();
+
+        if (files == null || files.length == 0) {
+            System.out.println("No files found in the specified folder.");
+            return;
+        }
+
+        for (File file : files) {
+            if (file.isFile() && file.getName().toLowerCase().endsWith(".tif")) {
+                try {
+                    int pageCount = getTiffPageCount(file);
+                    String newFileName = generateNewFileName(file, pageCount);
+                    renameFile(file, newFileName);
+
+                    System.out.println("Renamed file: " + file.getName() + " -> " + newFileName);
+                } catch (IOException e) {
+                    System.out.println("Error processing file: " + file.getName() + ". " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    private static int getTiffPageCount(File file) throws IOException {
+        ImageInputStream iis = ImageIO.createImageInputStream(file);
+        Iterator<ImageReader> imageReaders = ImageIO.getImageReaders(iis);
+
+        if (!imageReaders.hasNext()) {
+            throw new IOException("No TIFF image reader found for file: " + file.getName());
+        }
+
+        ImageReader reader = imageReaders.next();
+        reader.setInput(iis);
+        int pageCount = reader.getNumImages(true);
+
+        reader.dispose();
+        iis.close();
+
+        return pageCount;
+    }
+
+    private static String generateNewFileName(File file, int pageCount) {
+        String originalFileName = file.getName();
+        int lastHyphenIndex = originalFileName.lastIndexOf("-");
+
+        if (lastHyphenIndex != -1) {
+            String nameWithoutHyphen = originalFileName.substring(0, lastHyphenIndex);
+            return nameWithoutHyphen + "-" + pageCount + ".tif";
+        } else {
+            return originalFileName;
+        }
+    }
+
+    private static void renameFile(File file, String newFileName) throws IOException {
+        Path sourcePath = file.toPath();
+        Path destinationPath = sourcePath.resolveSibling(newFileName);
+        Files.move(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+    }
+}
